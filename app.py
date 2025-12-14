@@ -49,6 +49,8 @@ st.markdown("""
         border-radius: 10px;
         border-left: 5px solid #1f77b4;
         margin-bottom: 1rem;
+        color: #000000;
+        line-height: 1.8;
     }
     .score-badge {
         display: inline-block;
