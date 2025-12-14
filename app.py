@@ -85,6 +85,30 @@ def load_story():
         return "이야기 파일을 찾을 수 없습니다. story.txt 파일을 확인해주세요."
 
 
+def generate_conversation_summary(conversations, student_name):
+    """대화 내용을 요약 텍스트로 변환합니다."""
+    summary_lines = [
+        f"📚 {student_name}님의 AI 작가와의 대화",
+        "=" * 50,
+        ""
+    ]
+
+    for i, conv in enumerate(conversations, 1):
+        summary_lines.append(f"[질문 {i}]")
+        summary_lines.append(f"Q: {conv['question']}")
+        summary_lines.append("")
+        summary_lines.append(f"A: {conv['answer']}")
+        summary_lines.append("")
+        summary_lines.append("-" * 50)
+        summary_lines.append("")
+
+    summary_lines.append(f"총 질문 개수: {len(conversations)}개")
+    summary_lines.append("")
+    summary_lines.append("🤖 AI 작가와의 대화 플랫폼으로 생성됨")
+
+    return "\n".join(summary_lines)
+
+
 def init_session_state():
     """세션 상태 초기화"""
     if 'logged_in' not in st.session_state:
@@ -97,6 +121,8 @@ def init_session_state():
         st.session_state.conversation_data = None
     if 'story_content' not in st.session_state:
         st.session_state.story_content = load_story()
+    if 'input_key' not in st.session_state:
+        st.session_state.input_key = 0
 
 
 def login_page():
@@ -174,31 +200,13 @@ def main_page():
                 unsafe_allow_html=True
             )
 
-        # 통계 표시
+        # 통계 표시 (학생용 - 질문 수만)
         stats = st.session_state.conversation_data.get('statistics', {})
         total_q = stats.get('total_questions', 0)
-        avg_score = stats.get('average_score', 0.0)
 
         st.markdown("---")
         st.markdown("### 📊 나의 활동")
-        metric_col1, metric_col2 = st.columns(2)
-        with metric_col1:
-            st.metric("총 질문 수", f"{total_q}개")
-        with metric_col2:
-            st.metric("평균 점수", f"{avg_score:.1f}/5.0")
-
-        # 리포트 다운로드 버튼
-        if total_q > 0:
-            if st.button("📄 내 리포트 보기", use_container_width=True):
-                with st.spinner("리포트 생성 중..."):
-                    report = generate_report(st.session_state.student_id)
-                    st.download_button(
-                        label="📥 리포트 다운로드",
-                        data=report,
-                        file_name=f"학습리포트_{st.session_state.student_id}.md",
-                        mime="text/markdown",
-                        use_container_width=True
-                    )
+        st.metric("총 질문 수", f"{total_q}개")
 
     # 오른쪽: 대화 영역
     with right_col:
@@ -231,6 +239,20 @@ def main_page():
                     with st.chat_message("assistant", avatar="✍️"):
                         st.markdown(conv['answer'])
 
+        # 대화 요약 (복사용)
+        if len(conversations) > 0:
+            st.markdown("---")
+            with st.expander("📋 대화 요약 (복사하기)"):
+                summary = generate_conversation_summary(conversations, st.session_state.student_name)
+                st.text_area(
+                    "아래 내용을 복사하여 친구들과 공유하세요",
+                    value=summary,
+                    height=200,
+                    key="summary_text",
+                    label_visibility="collapsed"
+                )
+                st.caption("💡 위 텍스트를 드래그하여 복사(Ctrl+C 또는 Cmd+C)하세요")
+
         # 질문 입력 영역
         st.markdown("---")
 
@@ -244,7 +266,7 @@ def main_page():
             value=default_question,
             placeholder="이야기에 대해 궁금한 점을 물어보세요...",
             height=100,
-            key="question_input"
+            key=f"question_input_{st.session_state.input_key}"
         )
 
         if st.button("📤 질문하기", use_container_width=True, type="primary"):
@@ -286,7 +308,10 @@ def process_question(question):
             )
             print(f"[DEBUG] Save result: {success}")
 
-            # 5. 화면 갱신
+            # 5. 입력 필드 초기화를 위해 key 변경
+            st.session_state.input_key += 1
+
+            # 6. 화면 갱신
             st.success("답변을 받았어요!")
             st.rerun()
 
