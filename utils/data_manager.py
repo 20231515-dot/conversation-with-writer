@@ -147,29 +147,46 @@ def save_conversation(student_id, name, conversation_data):
     """
     conv_file = CONV_DIR / f"{student_id}.json"
     try:
+        print(f"[DEBUG] Saving conversation for {student_id}")
+
         # 이름과 통계 업데이트
         conversation_data['student_id'] = student_id
         conversation_data['name'] = name
 
         # 통계 계산
         conversations = conversation_data.get('conversations', [])
+        print(f"[DEBUG] Total conversations to save: {len(conversations)}")
+
         if conversations:
-            total_score = sum(conv['score']['total'] for conv in conversations if 'score' in conv)
-            avg_score = total_score / len(conversations) if conversations else 0.0
+            # 안전하게 점수 합계 계산
+            total_score = 0
+            valid_count = 0
+            for conv in conversations:
+                score = conv.get('score', {})
+                if isinstance(score, dict) and 'total' in score:
+                    total_score += score['total']
+                    valid_count += 1
+
+            avg_score = total_score / valid_count if valid_count > 0 else 0.0
 
             conversation_data['statistics'] = {
                 "total_questions": len(conversations),
                 "average_score": round(avg_score, 2),
-                "last_activity": conversations[-1]['timestamp'] if conversations else None
+                "last_activity": conversations[-1].get('timestamp') if conversations else None
             }
+            print(f"[DEBUG] Statistics: questions={len(conversations)}, avg_score={avg_score:.2f}")
 
         # 저장
+        print(f"[DEBUG] Writing to file: {conv_file}")
         with open(conv_file, 'w', encoding='utf-8') as f:
             json.dump(conversation_data, f, ensure_ascii=False, indent=2)
 
+        print(f"[DEBUG] Save successful!")
         return True
     except Exception as e:
+        import traceback
         print(f"대화 이력 저장 오류: {e}")
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
         return False
 
 

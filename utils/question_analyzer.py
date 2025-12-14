@@ -67,21 +67,36 @@ def parse_json_response(response):
         dict: 파싱된 JSON 데이터
     """
     try:
-        # JSON 블록 찾기 (```json ... ``` 형식)
+        print(f"[DEBUG] Parsing response: {response[:200]}...")  # 첫 200자만 출력
+
+        # 여러 패턴으로 JSON 찾기
+        json_str = None
+
+        # 패턴 1: ```json ... ``` 형식
         json_match = re.search(r'```json\s*(\{.*?\})\s*```', response, re.DOTALL)
         if json_match:
             json_str = json_match.group(1)
+            print("[DEBUG] Found JSON in code block")
         else:
-            # 중괄호로 둘러싸인 부분 찾기
-            json_match = re.search(r'\{.*?\}', response, re.DOTALL)
+            # 패턴 2: ``` ... ``` 형식 (json 태그 없이)
+            json_match = re.search(r'```\s*(\{.*?\})\s*```', response, re.DOTALL)
             if json_match:
-                json_str = json_match.group(0)
+                json_str = json_match.group(1)
+                print("[DEBUG] Found JSON in code block (no tag)")
             else:
-                # JSON을 찾을 수 없으면 전체 응답 사용
-                json_str = response
+                # 패턴 3: 중괄호로 둘러싸인 부분 (가장 큰 것)
+                json_match = re.search(r'\{[^}]*"total_score"[^}]*\}', response, re.DOTALL)
+                if json_match:
+                    json_str = json_match.group(0)
+                    print("[DEBUG] Found JSON by braces")
+                else:
+                    # 전체 응답 사용
+                    json_str = response
+                    print("[DEBUG] Using entire response")
 
         # JSON 파싱
         data = json.loads(json_str)
+        print(f"[DEBUG] Parsed JSON successfully: {data}")
 
         # 필수 필드 확인 및 기본값 설정
         result = {
@@ -106,11 +121,12 @@ def parse_json_response(response):
         elif result["total_score"] > 5.0:
             result["total_score"] = 5.0
 
+        print(f"[DEBUG] Final score result: {result}")
         return result
 
     except json.JSONDecodeError as e:
-        print(f"JSON 파싱 오류: {e}")
-        print(f"응답 내용: {response}")
+        print(f"[ERROR] JSON 파싱 오류: {e}")
+        print(f"[ERROR] 응답 내용: {response}")
         # 기본 점수 반환
         return {
             "total_score": 3.0,
@@ -121,7 +137,9 @@ def parse_json_response(response):
             "feedback": "질문을 분석했습니다."
         }
     except Exception as e:
-        print(f"파싱 오류: {e}")
+        import traceback
+        print(f"[ERROR] 파싱 오류: {e}")
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
         return {
             "total_score": 3.0,
             "depth": 3,

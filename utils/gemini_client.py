@@ -47,7 +47,7 @@ class GeminiClient:
 
         # 모델 초기화
         self.model = genai.GenerativeModel(
-            'gemini-1.5-flash',
+            'gemini-2.5-flash',
             safety_settings=self.safety_settings
         )
 

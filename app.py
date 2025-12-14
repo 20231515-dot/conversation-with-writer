@@ -226,14 +226,6 @@ def main_page():
                     # 학생 질문
                     with st.chat_message("user"):
                         st.markdown(conv['question'])
-                        # 점수 표시
-                        score = conv.get('score', {})
-                        total_score = score.get('total', 0)
-                        score_class = "score-excellent" if total_score >= 4.0 else "score-good" if total_score >= 3.0 else "score-normal"
-                        st.markdown(
-                            f'<span class="score-badge {score_class}">{total_score:.1f}점</span>',
-                            unsafe_allow_html=True
-                        )
 
                     # AI 답변
                     with st.chat_message("assistant", avatar="✍️"):
@@ -271,8 +263,9 @@ def process_question(question):
             prompt = get_author_role_prompt(st.session_state.story_content, question)
             answer = client.generate_response(prompt)
 
-            # 2. 질문 분석
+            # 2. 질문 분석 (백그라운드)
             score_data = analyze_question(question, st.session_state.story_content)
+            print(f"[DEBUG] Score data: {score_data}")  # 디버깅
 
             # 3. 대화 이력에 추가
             new_conv = {
@@ -283,19 +276,23 @@ def process_question(question):
             }
 
             st.session_state.conversation_data['conversations'].append(new_conv)
+            print(f"[DEBUG] Added to session, total conversations: {len(st.session_state.conversation_data['conversations'])}")
 
             # 4. 저장
-            save_conversation(
+            success = save_conversation(
                 st.session_state.student_id,
                 st.session_state.student_name,
                 st.session_state.conversation_data
             )
+            print(f"[DEBUG] Save result: {success}")
 
             # 5. 화면 갱신
-            st.success(f"답변을 받았어요! (질문 점수: {score_data['total_score']:.1f}/5.0)")
+            st.success("답변을 받았어요!")
             st.rerun()
 
         except Exception as e:
+            import traceback
+            print(f"[ERROR] {traceback.format_exc()}")
             st.error(f"오류가 발생했습니다: {str(e)}")
 
 
