@@ -233,3 +233,54 @@ def load_guide_questions():
     except Exception as e:
         print(f"가이드 질문 로드 오류: {e}")
         return []
+
+
+# ============= 공유 기능 관련 함수 (Sharing Manager 래퍼) =============
+
+def get_student_sharing_status(student_id):
+    """
+    특정 학생의 공유 설정을 조회합니다.
+    sharing_manager의 래퍼 함수입니다.
+
+    Args:
+        student_id (str): 학번
+
+    Returns:
+        dict: 공유 설정 정보
+    """
+    from utils.sharing_manager import get_sharing_status
+    return get_sharing_status(student_id)
+
+
+def update_student_sharing(student_id, name, is_shared, display_as="named"):
+    """
+    학생의 공유 설정을 업데이트합니다.
+    sharing_manager의 래퍼 함수입니다.
+
+    Args:
+        student_id (str): 학번
+        name (str): 이름
+        is_shared (bool): 공유 여부
+        display_as (str): 표시 방식 ('named' 또는 'anonymous')
+
+    Returns:
+        bool: 성공 여부
+    """
+    from utils.sharing_manager import save_sharing_preference
+    return save_sharing_preference(student_id, name, is_shared, display_as)
+
+
+def get_shared_conversations(sort_by="recent", filter_anonymous=False):
+    """
+    공유된 모든 대화를 조회합니다.
+    sharing_manager의 래퍼 함수입니다.
+
+    Args:
+        sort_by (str): 정렬 방식 ('recent' 또는 'questions')
+        filter_anonymous (bool): True이면 익명만 표시
+
+    Returns:
+        list: 공유된 학생들의 대화 데이터
+    """
+    from utils.sharing_manager import get_shared_conversations as _get_shared
+    return _get_shared(sort_by, filter_anonymous)

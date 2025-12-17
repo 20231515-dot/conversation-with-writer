@@ -13,7 +13,10 @@ from utils.data_manager import (
     get_student,
     load_conversation,
     save_conversation,
-    load_guide_questions
+    load_guide_questions,
+    get_student_sharing_status,
+    update_student_sharing,
+    get_shared_conversations
 )
 from utils.gemini_client import get_client
 from utils.prompts import get_author_role_prompt
@@ -123,6 +126,10 @@ def init_session_state():
         st.session_state.story_content = load_story()
     if 'input_key' not in st.session_state:
         st.session_state.input_key = 0
+    if 'current_tab' not in st.session_state:
+        st.session_state.current_tab = 0  # 0=My Conversation, 1=Peer Discussions
+    if 'sharing_enabled' not in st.session_state:
+        st.session_state.sharing_enabled = False
 
 
 def login_page():
@@ -176,18 +183,8 @@ def login_page():
                 st.rerun()
 
 
-def main_page():
-    """메인 학습 화면"""
-    # 헤더
-    col_left, col_right = st.columns([3, 1])
-    with col_left:
-        st.markdown(f'<div class="main-title">📚 AI 작가와의 대화</div>', unsafe_allow_html=True)
-    with col_right:
-        st.markdown(f"**{st.session_state.student_name}** 학생")
-        st.caption(f"학번: {st.session_state.student_id}")
-
-    st.markdown("---")
-
+def show_my_conversation():
+    """내 대화 탭 - 이야기 읽기 및 AI 작가와 대화"""
     # 2단 레이아웃
     left_col, right_col = st.columns([1, 1])
 
@@ -207,6 +204,40 @@ def main_page():
         st.markdown("---")
         st.markdown("### 📊 나의 활동")
         st.metric("총 질문 수", f"{total_q}개")
+
+        # 공유 설정
+        st.markdown("---")
+        st.markdown("### ⚙️ 공유 설정")
+        with st.expander("친구들과 공유하기"):
+            sharing_status = get_student_sharing_status(st.session_state.student_id)
+
+            is_shared = st.checkbox(
+                "내 질문을 다른 학생들과 공유하기",
+                value=sharing_status.get('is_shared', False),
+                help="다른 친구들이 내 질문을 볼 수 있어요 (점수는 보이지 않아요)",
+                key="share_checkbox"
+            )
+
+            display_option = st.radio(
+                "이름 표시 방식",
+                ["이름 보이기", "익명으로 공유"],
+                index=0 if sharing_status.get('display_as', 'named') == 'named' else 1,
+                key="display_option"
+            )
+
+            if st.button("저장", use_container_width=True, key="save_sharing"):
+                display_as = "named" if display_option == "이름 보이기" else "anonymous"
+                success = update_student_sharing(
+                    st.session_state.student_id,
+                    st.session_state.student_name,
+                    is_shared,
+                    display_as
+                )
+                if success:
+                    st.success("✅ 설정이 저장되었습니다!")
+                    st.rerun()
+                else:
+                    st.error("설정 저장에 실패했습니다.")
 
     # 오른쪽: 대화 영역
     with right_col:
@@ -274,6 +305,90 @@ def main_page():
                 process_question(user_question.strip())
             else:
                 st.warning("질문을 입력해주세요.")
+
+
+def show_peer_discussions():
+    """친구들의 질문 보기 탭 - 공유된 대화 조회"""
+    st.markdown("### 📚 친구들의 질문")
+    st.caption("다른 학생들이 어떤 질문을 했는지 살펴보세요")
+
+    # 정렬/필터 옵션
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        sort_option = st.selectbox(
+            "정렬",
+            ["최근 활동순", "질문 많은 순"],
+            key="sort_option"
+        )
+    with col2:
+        filter_option = st.selectbox(
+            "필터",
+            ["전체", "익명만"],
+            key="filter_option"
+        )
+
+    # 정렬 및 필터 파라미터 변환
+    sort_by = "recent" if sort_option == "최근 활동순" else "questions"
+    filter_anonymous = (filter_option == "익명만")
+
+    # 공유된 대화 가져오기
+    shared_conversations = get_shared_conversations(sort_by=sort_by, filter_anonymous=filter_anonymous)
+
+    if not shared_conversations:
+        st.info("🌟 아직 공유된 질문이 없어요. 첫 번째로 공유해보세요!")
+        st.markdown("---")
+        st.markdown("💡 **공유하려면:**")
+        st.markdown("1. '📖 내 대화' 탭으로 이동하세요")
+        st.markdown("2. 왼쪽의 '⚙️ 공유 설정'을 펼치세요")
+        st.markdown("3. '내 질문을 다른 학생들과 공유하기'를 체크하세요")
+        return
+
+    st.markdown(f"**총 {len(shared_conversations)}명의 학생이 질문을 공유했어요!**")
+    st.markdown("---")
+
+    # 학생별 카드 표시
+    for student_data in shared_conversations:
+        student_id = student_data['student_id']
+        display_name = student_data['display_name']
+        conversations = student_data['conversations']
+        question_count = student_data['question_count']
+
+        # 학생 카드
+        with st.expander(f"👤 {display_name} ({question_count}개 질문)", expanded=False):
+            if question_count == 0:
+                st.caption("아직 질문이 없어요")
+            else:
+                for i, conv in enumerate(conversations, 1):
+                    st.markdown(f"**질문 {i}**")
+                    with st.chat_message("user"):
+                        st.markdown(conv['question'])
+                    with st.chat_message("assistant", avatar="✍️"):
+                        st.markdown(conv['answer'])
+
+                    if i < len(conversations):
+                        st.markdown("---")
+
+
+def main_page():
+    """메인 학습 화면 - 탭 레이아웃"""
+    # 헤더
+    col_left, col_right = st.columns([3, 1])
+    with col_left:
+        st.markdown(f'<div class="main-title">📚 AI 작가와의 대화</div>', unsafe_allow_html=True)
+    with col_right:
+        st.markdown(f"**{st.session_state.student_name}** 학생")
+        st.caption(f"학번: {st.session_state.student_id}")
+
+    st.markdown("---")
+
+    # 탭 레이아웃
+    tab1, tab2 = st.tabs(["📖 내 대화", "📚 친구들 질문 보기"])
+
+    with tab1:
+        show_my_conversation()
+
+    with tab2:
+        show_peer_discussions()
 
 
 def process_question(question):
