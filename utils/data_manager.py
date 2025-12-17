@@ -163,8 +163,8 @@ def save_conversation(student_id, name, conversation_data):
             valid_count = 0
             for conv in conversations:
                 score = conv.get('score', {})
-                if isinstance(score, dict) and 'total' in score:
-                    total_score += score['total']
+                if isinstance(score, dict) and 'total_score' in score:
+                    total_score += score['total_score']
                     valid_count += 1
 
             avg_score = total_score / valid_count if valid_count > 0 else 0.0
