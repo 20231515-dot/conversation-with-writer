@@ -26,21 +26,27 @@
 
 ```
 assignment/
-├── app.py                      # 학생용 메인 앱
-├── teacher_dashboard.py        # 교사용 대시보드
+├── main.py                     # 🆕 통합 앱 진입점 (역할 선택)
+├── student_app.py              # 🆕 학생용 앱 모듈
+├── teacher_app.py              # 🆕 교사용 대시보드 모듈
+├── app.py                      # 학생용 앱 (레거시, 로컬 테스트용)
+├── teacher_dashboard.py        # 교사용 대시보드 (레거시, 로컬 테스트용)
 ├── story.txt                   # 고정된 이야기
 ├── requirements.txt            # Python 패키지 의존성
 ├── README.md                   # 이 파일
+├── PROGRESS.md                 # 프로젝트 진행 상황
 ├── .env.example               # API 키 예시
 ├── .gitignore                 # Git 제외 파일
 ├── utils/                     # 유틸리티 모듈
 │   ├── gemini_client.py       # Gemini API 클라이언트
 │   ├── question_analyzer.py   # 질문 분석
 │   ├── data_manager.py        # 데이터 관리
+│   ├── sharing_manager.py     # 🆕 공유 관리
 │   ├── report_generator.py    # 리포트 생성
 │   └── prompts.py             # AI 프롬프트
 └── data/                      # 데이터 파일 (자동 생성)
     ├── students.json          # 학생 정보
+    ├── sharing_settings.json  # 🆕 공유 설정
     ├── guide_questions.json   # 가이드 질문
     └── conversations/         # 학생별 대화 이력
 ```
@@ -91,30 +97,75 @@ GEMINI_API_KEY=your_api_key_here
 
 ## 💻 사용 방법
 
-### 학생용 앱 실행
+### 통합 앱 실행 (권장) ⭐
+
+학생용 앱과 교사용 대시보드가 하나로 통합되었습니다:
 
 ```bash
-streamlit run app.py --server.port 23082
+streamlit run main.py
 ```
 
-브라우저가 자동으로 열리며, 학생들은:
-1. 학번과 이름을 입력하여 시작
-2. 왼쪽에서 이야기를 읽기
-3. 오른쪽에서 AI 작가에게 질문하기
-4. 질문 점수를 즉시 확인
-5. 학습 리포트 다운로드
+브라우저가 열리면:
+1. **역할 선택**: 학생 또는 교사 선택
+2. **교사 로그인**: 교사 선택 시 비밀번호 입력 (기본: `teacher2024`)
+3. **앱 사용**: 선택한 역할에 맞는 화면이 표시됩니다
 
-### 교사용 대시보드 실행
+### 개별 앱 실행 (로컬 테스트용)
+
+개발/테스트 목적으로 개별 앱을 실행할 수도 있습니다:
 
 ```bash
+# 학생용 앱만 실행
+streamlit run app.py --server.port 23082
+
+# 교사용 대시보드만 실행
 streamlit run teacher_dashboard.py --server.port 23083
 ```
 
-교사는:
+### 기능 안내
+
+**학생 기능**:
+1. 학번과 이름을 입력하여 시작
+2. 이야기 읽기 및 AI 작가와 대화
+3. 친구들 질문 공유/조회 (피어 디스커션 보드)
+4. 공유 설정 (실명/익명 선택)
+5. 대화 요약 복사
+
+**교사 기능**:
 1. 전체 학생 통계 확인
 2. 학생별 진행도 모니터링
 3. 개별 학생 대화 이력 조회
 4. 학습 리포트 생성 및 다운로드
+
+## ☁️ Streamlit Cloud 배포
+
+### 1. 배포 준비
+
+Streamlit Cloud Community에 배포하려면 main.py를 진입점으로 사용하세요:
+
+```
+Main file path: main.py
+```
+
+### 2. Secrets 설정
+
+Streamlit Cloud의 Settings → Secrets에서 다음을 추가하세요:
+
+```toml
+GEMINI_API_KEY = "your-gemini-api-key-here"
+TEACHER_PASSWORD = "your-teacher-password-here"
+```
+
+### 3. 데이터 지속성 주의사항
+
+⚠️ **중요**: Streamlit Cloud Community는 앱 재시작 시 로컬 파일 시스템이 초기화됩니다.
+
+프로덕션 환경에서는 다음 중 하나를 사용하세요:
+- **외부 데이터베이스**: PostgreSQL, MongoDB, Firebase 등
+- **클라우드 스토리지**: Google Cloud Storage, AWS S3 등
+- **Streamlit Cloud 유료 플랜**: 지속적 스토리지 제공
+
+로컬 테스트 및 단기 데모용으로는 현재 JSON 파일 방식도 충분합니다.
 
 ## 🔧 포트 설정
 
@@ -122,7 +173,7 @@ streamlit run teacher_dashboard.py --server.port 23083
 
 포트를 변경하려면:
 ```bash
-streamlit run app.py --server.port 23084
+streamlit run main.py --server.port 23084
 ```
 
 ## 📊 데이터 관리

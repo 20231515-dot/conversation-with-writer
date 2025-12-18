@@ -422,4 +422,59 @@ e32c05e - Initial commit: AI 작가와의 대화 플랫폼
 
 ---
 
+## 🎉 Session 5 - 통합 앱 구현 (2025-12-17)
+
+### 문제점
+- Streamlit Cloud Community에서 개별 앱 배포 시 데이터 공유 불가
+- app.py와 teacher_dashboard.py를 별도 인스턴스로 배포하면 파일 시스템이 분리됨
+
+### 해결 방법
+**단일 통합 앱 구현** - 역할 기반 라우팅
+
+### 새로 생성된 파일
+1. **main.py** - 통합 앱 진입점
+   - 역할 선택 페이지 (학생/교사)
+   - 교사 인증 (비밀번호 보호)
+   - 역할에 따라 적절한 모듈 실행
+
+2. **student_app.py** - 학생 앱 모듈화
+   - app.py를 모듈로 변환
+   - run() 함수로 실행
+   - main.py에서 import하여 사용
+
+3. **teacher_app.py** - 교사 대시보드 모듈화
+   - teacher_dashboard.py를 모듈로 변환
+   - run() 함수로 실행
+   - 뒤로 가기 버튼 추가
+
+### 레거시 파일 유지
+- `app.py`, `teacher_dashboard.py` - 로컬 개발/테스트용으로 유지
+
+### 배포 방법
+**Streamlit Cloud 배포 시**:
+```
+Main file path: main.py
+```
+
+**로컬 실행**:
+```bash
+# 통합 앱 (권장)
+streamlit run main.py
+
+# 또는 개별 앱 (테스트용)
+streamlit run app.py
+streamlit run teacher_dashboard.py
+```
+
+### 교사 인증
+- 기본 비밀번호: `teacher2024`
+- 환경 변수로 설정 가능 (Streamlit Secrets)
+
+### 데이터 공유
+- 단일 앱이므로 `data/` 디렉토리 공유
+- 학생과 교사가 동일한 데이터에 접근
+- 파일 시스템 기반 데이터 관리 정상 작동
+
+---
+
 *마지막 업데이트: 2025-12-17 by Claude Code*
