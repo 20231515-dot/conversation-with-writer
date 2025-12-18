@@ -7,6 +7,7 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 import time
+import streamlit as st
 
 # 환경 변수 로드
 load_dotenv()
