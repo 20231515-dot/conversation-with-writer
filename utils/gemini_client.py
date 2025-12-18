@@ -14,7 +14,7 @@ load_dotenv()
 class GeminiClient:
     def __init__(self):
         """Gemini API 클라이언트 초기화"""
-        api_key = os.getenv('GEMINI_API_KEY')
+        api_key = st.secrets["GEMINI_API_KEY"]
 
         if not api_key:
             raise ValueError(
